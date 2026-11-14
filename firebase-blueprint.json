@@ -1,0 +1,245 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Public workspace preferences and display identity for a Pluto OS user (non-PII).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Firebase Auth UID matching document ID."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "User display name shown in Pluto OS Start Menu and Lock Screen."
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Optional profile photo URL."
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["dark", "light"],
+          "description": "Global OS appearance theme."
+        },
+        "wallpaper": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Selected desktop wallpaper preset identifier."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of profile creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last profile update."
+        }
+      },
+      "required": ["uid", "displayName", "theme", "wallpaper", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "User Private Info",
+      "description": "Isolated PII storage for authenticated user email and 2FA preferences.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "twoFactorEnabled": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "twoFactorEnabled", "updatedAt"]
+    },
+    "OSTask": {
+      "title": "OS Task",
+      "description": "Prioritized user task synced across devices via Firestore.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "ownerId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["Critical", "High", "Medium", "Low"]
+        },
+        "dueDate": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "isEncrypted": {
+          "type": "boolean"
+        },
+        "encryptedPayload": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerId", "title", "priority", "category", "completed", "isEncrypted", "createdAt", "updatedAt"]
+    },
+    "OSAlarm": {
+      "title": "OS Alarm",
+      "description": "Recurring calendar alarm with custom sound settings.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "ownerId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "maxLength": 5
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "days": {
+          "type": "array"
+        },
+        "sound": {
+          "type": "string",
+          "enum": ["chime", "pulse", "bell", "synth", "silent"]
+        },
+        "volume": {
+          "type": "number"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerId", "time", "label", "days", "sound", "volume", "enabled", "createdAt", "updatedAt"]
+    },
+    "CloudFileRecord": {
+      "title": "Cloud Vault File Record",
+      "description": "Metadata entry for encrypted files stored in the user's 1TB Cloud Vault.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "ownerId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "sizeBytes": {
+          "type": "number"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["document", "backup", "media", "archive"]
+        },
+        "isEncrypted": {
+          "type": "boolean"
+        },
+        "syncedAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerId", "name", "sizeBytes", "category", "isEncrypted", "syncedAt", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User workspace preferences and display name."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "PII-isolated private user metadata (email, 2FA)."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/OSTask" },
+      "description": "User prioritized tasks synced to Cloud Firestore."
+    },
+    "/users/{userId}/alarms/{alarmId}": {
+      "schema": { "$ref": "#/entities/OSAlarm" },
+      "description": "User recurring calendar alarms synced to Cloud Firestore."
+    },
+    "/users/{userId}/cloud_files/{fileId}": {
+      "schema": { "$ref": "#/entities/CloudFileRecord" },
+      "description": "1TB Cloud Vault file index per user."
+    }
+  }
+}

@@ -1,0 +1,245 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Default-Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function parentUserExistsAndOwned(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+        get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid;
+    }
+
+    // Entity Validation Blueprints (synchronized verbatim with firebase-blueprint.json)
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'theme', 'wallpaper', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'photoURL', 'theme', 'wallpaper', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.uid == userId &&
+        data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 512)) &&
+        data.theme is string && data.theme in ['dark', 'light'] &&
+        data.wallpaper is string && data.wallpaper.size() >= 1 && data.wallpaper.size() <= 64 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'twoFactorEnabled', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'twoFactorEnabled', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.uid == userId &&
+        data.uid == request.auth.uid &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 254 &&
+        data.twoFactorEnabled is bool &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidOSTask(data, userId, taskId) {
+      return data.keys().hasAll(['id', 'ownerId', 'title', 'priority', 'category', 'completed', 'isEncrypted', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'ownerId', 'title', 'priority', 'dueDate', 'category', 'completed', 'isEncrypted', 'encryptedPayload', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.id == taskId &&
+        isValidId(data.ownerId) &&
+        data.ownerId == userId &&
+        data.ownerId == request.auth.uid &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 240 &&
+        data.priority is string && data.priority in ['Critical', 'High', 'Medium', 'Low'] &&
+        (!('dueDate' in data) || (data.dueDate is string && data.dueDate.size() <= 40)) &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 48 &&
+        data.completed is bool &&
+        data.isEncrypted is bool &&
+        (!('encryptedPayload' in data) || (data.encryptedPayload is string && data.encryptedPayload.size() <= 2048)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidOSAlarm(data, userId, alarmId) {
+      return data.keys().hasAll(['id', 'ownerId', 'time', 'label', 'days', 'sound', 'volume', 'enabled', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'ownerId', 'time', 'label', 'days', 'sound', 'volume', 'enabled', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.id == alarmId &&
+        isValidId(data.ownerId) &&
+        data.ownerId == userId &&
+        data.ownerId == request.auth.uid &&
+        data.time is string && data.time.size() == 5 && data.time.matches('^([01]\\d|2[0-3]):[0-5]\\d$') &&
+        data.label is string && data.label.size() >= 1 && data.label.size() <= 120 &&
+        data.days is list && data.days.size() <= 7 && (data.days.size() == 0 || (data.days[0] is int && data.days[0] >= 0 && data.days[0] <= 6)) &&
+        data.sound is string && data.sound in ['chime', 'pulse', 'bell', 'synth', 'silent'] &&
+        data.volume is number && data.volume >= 0 && data.volume <= 100 &&
+        data.enabled is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCloudFileRecord(data, userId, fileId) {
+      return data.keys().hasAll(['id', 'ownerId', 'name', 'sizeBytes', 'category', 'isEncrypted', 'syncedAt', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'ownerId', 'name', 'sizeBytes', 'category', 'isEncrypted', 'syncedAt', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.id == fileId &&
+        isValidId(data.ownerId) &&
+        data.ownerId == userId &&
+        data.ownerId == request.auth.uid &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 180 &&
+        data.sizeBytes is number && data.sizeBytes >= 0 && data.sizeBytes <= 1099511627776 &&
+        data.category is string && data.category in ['document', 'backup', 'media', 'archive'] &&
+        data.isEncrypted is bool &&
+        data.syncedAt is string && data.syncedAt.size() >= 1 && data.syncedAt.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // 1. User Profile Collection (Workspace Preferences Only)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isValidId(userId) &&
+        isOwner(userId) &&
+        isValidUserProfile(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(userId) &&
+        isOwner(userId) &&
+        isValidUserProfile(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'theme', 'wallpaper', 'updatedAt'])
+        );
+      allow delete: if isValidId(userId) && isOwner(userId);
+
+      // 2. PII Split Subcollection
+      match /private/{docId} {
+        allow get: if isValidId(userId) && docId == 'info' && isOwner(userId);
+        allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId) &&
+          docId == 'info' &&
+          isOwner(userId) &&
+          isValidUserPrivateInfo(incoming(), userId) &&
+          incoming().updatedAt == request.time &&
+          existsAfter(/databases/$(database)/documents/users/$(userId));
+        allow update: if isValidId(userId) &&
+          docId == 'info' &&
+          isOwner(userId) &&
+          isValidUserPrivateInfo(incoming(), userId) &&
+          incoming().uid == existing().uid &&
+          incoming().updatedAt == request.time &&
+          parentUserExistsAndOwned(userId) &&
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['email', 'twoFactorEnabled', 'updatedAt'])
+          );
+        allow delete: if isValidId(userId) && docId == 'info' && isOwner(userId);
+      }
+
+      // 3. Prioritized Tasks Subcollection
+      match /tasks/{taskId} {
+        allow get: if isValidId(userId) && isValidId(taskId) && isOwner(userId);
+        allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) &&
+          isValidId(taskId) &&
+          isOwner(userId) &&
+          isValidOSTask(incoming(), userId, taskId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          parentUserExistsAndOwned(userId);
+        allow update: if isValidId(userId) &&
+          isValidId(taskId) &&
+          isOwner(userId) &&
+          isValidOSTask(incoming(), userId, taskId) &&
+          incoming().id == existing().id &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          parentUserExistsAndOwned(userId) &&
+          (
+            // Action: Toggle completion
+            incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'updatedAt']) ||
+            // Action: Prioritize / Edit metadata
+            incoming().diff(existing()).affectedKeys().hasOnly(['title', 'priority', 'dueDate', 'category', 'updatedAt']) ||
+            // Action: Encrypt / Decrypt payload
+            incoming().diff(existing()).affectedKeys().hasOnly(['isEncrypted', 'encryptedPayload', 'updatedAt'])
+          );
+        allow delete: if isValidId(userId) && isValidId(taskId) && isOwner(userId) && parentUserExistsAndOwned(userId);
+      }
+
+      // 4. Recurring Alarms Subcollection
+      match /alarms/{alarmId} {
+        allow get: if isValidId(userId) && isValidId(alarmId) && isOwner(userId);
+        allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) &&
+          isValidId(alarmId) &&
+          isOwner(userId) &&
+          isValidOSAlarm(incoming(), userId, alarmId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          parentUserExistsAndOwned(userId);
+        allow update: if isValidId(userId) &&
+          isValidId(alarmId) &&
+          isOwner(userId) &&
+          isValidOSAlarm(incoming(), userId, alarmId) &&
+          incoming().id == existing().id &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          parentUserExistsAndOwned(userId) &&
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['enabled', 'updatedAt']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['time', 'label', 'days', 'sound', 'volume', 'enabled', 'updatedAt'])
+          );
+        allow delete: if isValidId(userId) && isValidId(alarmId) && isOwner(userId) && parentUserExistsAndOwned(userId);
+      }
+
+      // 5. 1TB Cloud Vault Files Index Subcollection
+      match /cloud_files/{fileId} {
+        allow get: if isValidId(userId) && isValidId(fileId) && isOwner(userId);
+        allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) &&
+          isValidId(fileId) &&
+          isOwner(userId) &&
+          isValidCloudFileRecord(incoming(), userId, fileId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          parentUserExistsAndOwned(userId);
+        allow update: if isValidId(userId) &&
+          isValidId(fileId) &&
+          isOwner(userId) &&
+          isValidCloudFileRecord(incoming(), userId, fileId) &&
+          incoming().id == existing().id &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          parentUserExistsAndOwned(userId) &&
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['syncedAt', 'isEncrypted', 'updatedAt'])
+          );
+        allow delete: if isValidId(userId) && isValidId(fileId) && isOwner(userId) && parentUserExistsAndOwned(userId);
+      }
+    }
+  }
+}

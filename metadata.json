@@ -1,0 +1,6 @@
+{
+  "name": "Pluto OS",
+  "description": "Streamlined desktop operating system with Pluto brand identity, recent version tracking, real-time audio mixer, Web Audio synth, live Google Search grounding, 1TB encrypted cloud sync, and P0-P3 task prioritization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
